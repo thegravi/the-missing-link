@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ESLint
+        run: npm install eslint@8
+
+      - name: Lint JavaScript
+        run: npx eslint content.js options.js --no-eslintrc --env browser,webextensions,es2021
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest
+        run: |
+          node -e "
+            const manifest = require('./manifest.json');
+            if (!manifest.manifest_version) throw new Error('Missing manifest_version');
+            if (!manifest.name) throw new Error('Missing name');
+            if (!manifest.version) throw new Error('Missing version');
+            console.log('Manifest valid:', manifest.name, 'v' + manifest.version);
+          "
+
+      - name: Create extension zip
+        run: zip -r extension.zip manifest.json content.js options.html options.js styles.css icon48.png icon128.png LICENSE README.md
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: extension.zip

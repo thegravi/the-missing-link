@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Verify manifest version matches tag
+        run: |
+          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          if [ "$MANIFEST_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Error: manifest.json version ($MANIFEST_VERSION) doesn't match tag (v${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Create extension zip
+        run: zip -r the-missing-link-v${{ steps.version.outputs.version }}.zip manifest.json content.js options.html options.js styles.css icon48.png icon128.png LICENSE README.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: the-missing-link-v${{ steps.version.outputs.version }}.zip
+          generate_release_notes: true

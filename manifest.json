@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "The Missing Link",
+  "version": "1.0.0",
+  "description": "Enhances GitHub PRs with GitLab pipeline links and Jira ticket links",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
