@@ -360,20 +360,32 @@ async function fetchFailedJobs(pipelineId) {
   const projectId = encodeURIComponent(gitlabProjectPath);
   const url = `${gitlabBaseUrl}/api/v4/projects/${projectId}/pipelines/${pipelineId}/jobs?scope[]=failed`;
 
-  const response = await fetch(url, {
-    headers: {
-      'PRIVATE-TOKEN': settings.gitlabPat
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'PRIVATE-TOKEN': settings.gitlabPat
+      }
+    });
+  } catch (fetchError) {
+    // Network errors (CORS, DNS, connection refused, etc.)
+    if (fetchError.message.includes('NetworkError') || fetchError.name === 'TypeError') {
+      throw new Error('Cannot reach GitLab. Check: 1) GitLab URL is correct, 2) GitLab allows CORS from GitHub, 3) VPN if required');
     }
-  });
+    throw new Error('Network error: ' + fetchError.message);
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Invalid GitLab token');
+      throw new Error('Invalid GitLab token (401). Check PAT has read_api scope');
+    }
+    if (response.status === 403) {
+      throw new Error('Access denied (403). Check PAT permissions for this project');
     }
     if (response.status === 404) {
-      throw new Error('Pipeline not found');
+      throw new Error('Not found (404). Check GitLab project URL matches pipeline');
     }
-    throw new Error('API error: ' + response.status);
+    throw new Error('GitLab API error: ' + response.status + ' ' + response.statusText);
   }
 
   return await response.json();
